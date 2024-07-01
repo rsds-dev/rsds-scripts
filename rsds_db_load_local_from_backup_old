@@ -1,0 +1,72 @@
+#!/bin/bash
+
+BACKUP_FILE="$HOME/Documents/workspace-utils/db_downloads/rsds-test-db-b1065"
+
+DB_NAME=rsds_web_development
+USERNAME=dipenchauhan
+PORT=32768
+
+TENANT_DOMAIN="app.localhost"
+SCRUB_MODE="local"
+
+# -----------------------------------------
+# DON'T CHANGE ANYTHING BELOW THIS LINE
+# -----------------------------------------
+
+# Set the Rails environment variable
+export RAILS_ENV=development
+export SKIP_TEST_DATABASE=true
+
+# Check if the file exists
+if [ -e "$BACKUP_FILE" ]; then
+    echo "File exists: $BACKUP_FILE"
+else
+    echo "File does not exist: $BACKUP_FILE"
+    exit 1  # Exit with an error code
+fi
+
+clear
+echo "Running script to load local db from a backup..."
+
+echo
+echo "Loading db in localhost environment from full backup ($BACKUP_FILE)..."
+echo
+
+# activate these next two lines if i am restoring a db for my local rails webapp env
+echo
+echo "Dropping db..."
+echo
+
+DISABLE_DATABASE_ENVIRONMENT_CHECK=1 rake db:drop
+
+echo
+echo "Re-creating db..."
+echo
+
+rake db:create
+
+echo
+echo "Creating heroku_ext schema..."
+echo
+
+psql --host=localhost --port=$PORT --username=$USERNAME --dbname=$DB_NAME -c "CREATE SCHEMA heroku_ext;"
+
+echo
+echo "Restoring db..."
+echo
+
+pg_restore --if-exists --verbose --clean --no-acl --no-owner --host=localhost --port=$PORT --username=$USERNAME --dbname=$DB_NAME $BACKUP_FILE
+
+echo
+echo "Running migrations..."
+echo
+
+rails db:migrate
+
+echo
+echo "Scrubbing data..."
+echo
+
+rake database:update_db_after_restore[$TENANT_DOMAIN,$SCRUB_MODE]
+
+# rails api_rsds:add_integration_client
