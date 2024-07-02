@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# ---------------------------------------------------------------------------
+# DON'T CHANGE ANYTHING BELOW THIS LINE
+# ---------------------------------------------------------------------------
+# 
+clear
+echo "Starting RSDS..."
+
+# start the app using foreman like heroku; foreman uses port 5000 by default
+foreman start -f Procfile.dev -p 4000
